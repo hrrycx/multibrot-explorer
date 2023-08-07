@@ -14,4 +14,4 @@ rust egui project to explore multibrot fractals
 - perhaps add a benchmarking feature
 
 ## running
-run with 'cargo run --release' for best performance
+run with `cargo run --release` for best performance
