@@ -1,0 +1,12 @@
+[package]
+name = "mdlexplore"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+colorsys = "0.6.7"
+eframe = "0.22.0"
+egui_extras = "0.22.0"
+rayon = "1.7.0"
