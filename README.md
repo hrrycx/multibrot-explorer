@@ -11,3 +11,7 @@ rust egui project to explore multibrot fractals
 - add option to show axes
 - better styling
 - format readme
+- perhaps add a benchmarking feature
+
+## running
+run with 'cargo run --release' for best performance
