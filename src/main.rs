@@ -41,17 +41,17 @@ fn main() -> Result<(), eframe::Error> {
         Box::new(|_cc| Box::<Content>::default()),
     )
 }
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ColoringMode {
     Hsl(f64),
     Monochrome(Color32),
 }
-impl fmt::Debug for ColoringMode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Point")
-            .field("x", &self.x)
-            .field("y", &self.y)
-            .finish()
+impl ColoringMode{
+    fn output(&self)-> String{
+        match self{
+            ColoringMode::Hsl(_) => return String::from("HSL"),
+            ColoringMode::Monochrome(_) => return String::from("Monochrome"),
+        }
     }
 }
 struct Content {
@@ -165,7 +165,7 @@ impl eframe::App for Content {
                     .text("scale"),
             );
             egui::ComboBox::from_label("Select one!")
-                .selected_text(format!("{:?}", self.coloring))
+                .selected_text(format!("{}", self.coloring.output()))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.coloring, ColoringMode::Hsl(0.), "Hsl");
                     ui.selectable_value(
