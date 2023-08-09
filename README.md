@@ -8,6 +8,7 @@ rust egui project to explore multibrot fractals
 ## todo:
 - change colour of fps dependent on colour of fractal
 - show orbits
+- pi approximation
 - allow negative powers
 - more colouring algorithms
 - add option to show axes
