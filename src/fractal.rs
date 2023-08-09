@@ -1,3 +1,5 @@
+use crate::Color32;
+use crate::ColoringMode;
 use colorsys::Hsl;
 use colorsys::Rgb;
 use rayon::iter::IntoParallelIterator;
@@ -54,21 +56,26 @@ pub fn mandelbrot(
     exponent: i32,
     width: i32,
     height: i32,
+    mode: ColoringMode,
 ) -> Vec<u8> {
     let buf: Vec<u8> = (0..height)
         .into_par_iter()
-        .map(|y| renderline(y as u32, scale, maxitr, center, exponent, width, height))
+        .map(|y| {
+            renderline(
+                y as u32, scale, maxitr, center, exponent, width, height, mode,
+            )
+        })
         .flatten()
         .collect();
     buf
 }
-fn findcolour(iterations: i32, maxitr: f64, r: f64) -> [u8; 4] {
+fn hslcolor(iterations: i32, maxitr: f64, r: f64, shift: f64) -> [u8; 4] {
     if iterations >= maxitr as i32 {
         return [0, 0, 0, 255];
     }
     let iterations: f64 = iterations as f64 + 1.0 - (((r).ln() / 2.0).ln()) / 2.0_f64.ln();
     let mut hsl = Hsl::default();
-    hsl.set_hue((360.0 * (iterations / maxitr)) % 360.0);
+    hsl.set_hue((360.0 * (iterations / maxitr) + shift) % 360.0);
     hsl.set_saturation(100.);
     hsl.set_lightness(50.0);
     let rgb_arr: [u8; 3] = Rgb::from(&hsl).into();
@@ -78,6 +85,19 @@ fn findcolour(iterations: i32, maxitr: f64, r: f64) -> [u8; 4] {
     rgba[2] = rgb_arr[2];
     rgba[3] = 255;
     rgba
+}
+fn monocolor(iterations: i32, maxitr: f64, r: f64, color: Color32) -> [u8; 4] {
+    if iterations >= maxitr as i32 {
+        return [0, 0, 0, 255];
+    }
+    let iterations: f64 = iterations as f64 + 1.0 - (((r).ln() / 2.0).ln()) / 2.0_f64.ln();
+
+    let mut color = color.to_array();
+    for i in 0..3 {
+        color[i] = ((iterations / maxitr) * color[i] as f64) as u8;
+    }
+    color[3] = 255;
+    color
 }
 pub fn px(x: f64, scale: f64, oX: f64, width: i32) -> f64 {
     return (oX) + ((2.0 * ((x - 1.0) / (width as f64 - 1.0)) - 1.0) * 1.235 * scale);
@@ -108,6 +128,7 @@ fn renderline(
     exponent: i32,
     width: i32,
     height: i32,
+    mode: ColoringMode,
 ) -> (Vec<u8>) {
     let mut x0: f64;
     let mut line: Vec<u8> = Vec::new();
@@ -115,7 +136,14 @@ fn renderline(
     for x in 0..width {
         x0 = px(x as f64, scale, center.x, width);
         let (iterations, r) = mandelcomp(x0, y0, maxitr, exponent);
-        line.extend_from_slice(&findcolour(iterations, maxitr, r));
+        match mode {
+            ColoringMode::Hsl(shift) => {
+                line.extend_from_slice(&hslcolor(iterations, maxitr, r, shift))
+            }
+            ColoringMode::Monochrome(color) => {
+                line.extend_from_slice(&monocolor(iterations, maxitr, r, color))
+            }
+        }
     }
     return line;
 }

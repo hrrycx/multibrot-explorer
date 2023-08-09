@@ -1,5 +1,4 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
-
 use eframe::egui;
 use eframe::IconData;
 use egui::*;
@@ -22,7 +21,15 @@ fn main() -> Result<(), eframe::Error> {
         .unwrap();
     let mut native_options = eframe::NativeOptions::default();
     native_options.icon_data = Some(IconData {
-        rgba: mandelbrot(coord { x: -0.765, y: 0. }, 1., 250., 2, 256, 256),
+        rgba: mandelbrot(
+            coord { x: -0.765, y: 0. },
+            1.,
+            250.,
+            2,
+            256,
+            256,
+            ColoringMode::Hsl(0.),
+        ),
         width: 256,
         height: 256,
     });
@@ -34,6 +41,19 @@ fn main() -> Result<(), eframe::Error> {
         Box::new(|_cc| Box::<Content>::default()),
     )
 }
+#[derive(Copy, Clone, PartialEq)]
+pub enum ColoringMode {
+    Hsl(f64),
+    Monochrome(Color32),
+}
+impl fmt::Debug for ColoringMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Point")
+            .field("x", &self.x)
+            .field("y", &self.y)
+            .finish()
+    }
+}
 struct Content {
     center: coord,
     zoom: f64,
@@ -41,7 +61,8 @@ struct Content {
     time: f64,
     maxitr: i32,
     exponent: i32,
-    prev: (coord, f64, i32, i32),
+    prev: (coord, f64, i32, i32, ColoringMode),
+    coloring: ColoringMode,
 }
 impl Default for Content {
     fn default() -> Self {
@@ -52,13 +73,22 @@ impl Default for Content {
                 "mandel",
                 ColorImage::from_rgba_unmultiplied(
                     [WIDTH as usize, HEIGHT as usize],
-                    &mandelbrot(coord { x: -0.765, y: 0. }, 1., 300., 2, WIDTH, HEIGHT),
+                    &mandelbrot(
+                        coord { x: -0.765, y: 0. },
+                        1.,
+                        300.,
+                        2,
+                        WIDTH,
+                        HEIGHT,
+                        ColoringMode::Hsl(0.),
+                    ),
                 ),
             ),
             time: 50000000.,
             maxitr: 300,
             exponent: 2,
-            prev: (coord { x: -0.765, y: 0. }, 1., 0, 2),
+            prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.)),
+            coloring: ColoringMode::Hsl(0.),
         }
     }
 }
@@ -134,8 +164,36 @@ impl eframe::App for Content {
                     .logarithmic(true)
                     .text("scale"),
             );
-
-            let new: (coord, f64, i32, i32) = (self.center, self.zoom, self.maxitr, self.exponent);
+            egui::ComboBox::from_label("Select one!")
+                .selected_text(format!("{:?}", self.coloring))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.coloring, ColoringMode::Hsl(0.), "Hsl");
+                    ui.selectable_value(
+                        &mut self.coloring,
+                        ColoringMode::Monochrome(egui::Color32::WHITE),
+                        "Monochrome",
+                    );
+                });
+            if let ColoringMode::Hsl(ref mut shift) = &mut self.coloring {
+                let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
+            };
+            if let ColoringMode::Monochrome(ref mut color) = &mut self.coloring {
+                ui.horizontal(|ui| {
+                    ui.label("tint:");
+                    let _ = egui::color_picker::color_edit_button_srgba(
+                        ui,
+                        color,
+                        egui::color_picker::Alpha::Opaque,
+                    );
+                });
+            };
+            let new: (coord, f64, i32, i32, ColoringMode) = (
+                self.center,
+                self.zoom,
+                self.maxitr,
+                self.exponent,
+                self.coloring,
+            );
             if new != self.prev {
                 self.render();
             }
@@ -207,6 +265,7 @@ impl Content {
                     self.exponent,
                     WIDTH,
                     HEIGHT,
+                    self.coloring,
                 ),
             ),
         );
