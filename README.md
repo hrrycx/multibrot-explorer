@@ -6,6 +6,7 @@ rust egui project to explore multibrot fractals
 - higher exponents need a lower maxitr (which helps to keep frame times down)
 
 ## todo:
+- change colour of fps dependent on colour of fractal
 - allow negative powers
 - more colouring algorithms
 - add option to show axes
