@@ -6,12 +6,16 @@ rust egui project to explore multibrot fractals
 - higher exponents need a lower maxitr (which helps to keep frame times down)
 
 ## todo:
+- change colour of fps dependent on colour of fractal
+- show orbits
+- right click to set center
+- pi approximation (done, add a ? how does this work)
 - allow negative powers
-- more colouring algorithms
+- more colouring algorithms (and hue range)
+- reset button
 - add option to show axes
 - better styling
-- format readme
-- perhaps add a benchmarking feature
+- make code easier to read, main is awful
 
 ## running
 run with `cargo run --release` for best performance
