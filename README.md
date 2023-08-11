@@ -10,7 +10,8 @@ rust egui project to explore multibrot fractals
 - show orbits
 - pi approximation
 - allow negative powers
-- more colouring algorithms
+- more colouring algorithms (and hue range)
+- reset button
 - add option to show axes
 - better styling
 - format readme
