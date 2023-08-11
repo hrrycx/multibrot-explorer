@@ -9,13 +9,12 @@ rust egui project to explore multibrot fractals
 - change colour of fps dependent on colour of fractal
 - show orbits
 - right click to set center
-- pi approximation
+- pi approximation (done, add a ? how does this work)
 - allow negative powers
 - more colouring algorithms (and hue range)
 - reset button
 - add option to show axes
 - better styling
-- format readme
 - make code easier to read, main is awful
 
 ## running
