@@ -160,3 +160,8 @@ pub fn mandelcomp(mut x0: f64, mut y0: f64, maxitr: f64, n: i32) -> (i32, f64) {
     }
     return (iterations, z.re * z.re + z.im * z.im);
 }
+pub fn piapprox() -> f64{
+    let epsilon = 0.0000001;
+    let (iter,_) = mandelcomp(-0.75, epsilon, 1000000000000000000000000000000000., 2);
+    return iter as f64 * epsilon;
+}

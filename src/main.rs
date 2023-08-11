@@ -63,6 +63,7 @@ struct Content {
     exponent: i32,
     prev: (coord, f64, i32, i32, ColoringMode),
     coloring: ColoringMode,
+    pi: f64,
 }
 impl Default for Content {
     fn default() -> Self {
@@ -74,13 +75,13 @@ impl Default for Content {
                 ColorImage::from_rgba_unmultiplied(
                     [WIDTH as usize, HEIGHT as usize],
                     &mandelbrot(
-                        coord { x: -0.765, y: 0. },
-                        1.,
-                        300.,
-                        2,
-                        WIDTH,
-                        HEIGHT,
-                        ColoringMode::Hsl(0.),
+                      coord { x: -0.765, y: 0. },
+                      1.,
+                      300.,
+                      2,
+                      WIDTH,
+                      HEIGHT,
+                      ColoringMode::Hsl(0.),
                     ),
                 ),
             ),
@@ -89,6 +90,7 @@ impl Default for Content {
             exponent: 2,
             prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.)),
             coloring: ColoringMode::Hsl(0.),
+            pi: 0.,
         }
     }
 }
@@ -187,6 +189,13 @@ impl eframe::App for Content {
                     );
                 });
             };
+            
+            if ui.add(egui::Button::new("calculate pi!")).clicked() {
+                self.pi = crate::fractal::piapprox();
+            }
+            if self.pi != 0.{
+            ui.label(format!("pi = {}", self.pi));
+            }
             let new: (coord, f64, i32, i32, ColoringMode) = (
                 self.center,
                 self.zoom,
