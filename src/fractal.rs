@@ -1,7 +1,6 @@
+use crate::hsl;
 use crate::Color32;
 use crate::ColoringMode;
-use colorsys::Hsl;
-use colorsys::Rgb;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 #[derive(Copy, Clone, PartialEq)]
@@ -74,16 +73,7 @@ fn hslcolor(iterations: i32, maxitr: f64, r: f64, shift: f64) -> [u8; 4] {
         return [0, 0, 0, 255];
     }
     let iterations: f64 = iterations as f64 + 1.0 - (((r).ln() / 2.0).ln()) / 2.0_f64.ln();
-    let mut hsl = Hsl::default();
-    hsl.set_hue((360.0 * (iterations / maxitr) + shift) % 360.0);
-    hsl.set_saturation(100.);
-    hsl.set_lightness(50.0);
-    let rgb_arr: [u8; 3] = Rgb::from(&hsl).into();
-    let mut rgba: [u8; 4] = [0; 4];
-    rgba[0] = rgb_arr[0];
-    rgba[1] = rgb_arr[1];
-    rgba[2] = rgb_arr[2];
-    rgba[3] = 255;
+    let rgba = hsl::hsl_to_rgba((iterations / maxitr) + (shift/360.)  % 1., 1., 0.5);
     rgba
 }
 fn monocolor(iterations: i32, maxitr: f64, r: f64, color: Color32) -> [u8; 4] {
@@ -99,11 +89,20 @@ fn monocolor(iterations: i32, maxitr: f64, r: f64, color: Color32) -> [u8; 4] {
     color[3] = 255;
     color
 }
-pub fn px(x: f64, scale: f64, oX: f64, width: i32) -> f64 {
-    return (oX) + ((2.0 * ((x - 1.0) / (width as f64 - 1.0)) - 1.0) * 1.235 * scale);
+
+fn funkycolor(iterations: i32, maxitr: f64, r: f64, shift: f64) -> [u8; 4]{
+    if r <= 4. {
+        return [0, 0, 0, 255];
+    }
+    let rgba = hsl::hsl_to_rgba(shift / 360. + (iterations as f64 / 800. * r), 1., 0.5);
+    rgba
 }
-pub fn py(y: f64, scale: f64, oY: f64, height: i32) -> f64 {
-    return (oY + (2.0 * ((y - 1.0) / (height as f64 - 1.0)) - 1.0) * 1.12 * scale);
+
+pub fn px(x: f64, scale: f64, ox: f64, width: i32) -> f64 {
+    return (ox) + ((2.0 * ((x - 1.0) / (width as f64 - 1.0)) - 1.0) * 1.235 * scale);
+}
+pub fn py(y: f64, scale: f64, oy: f64, height: i32) -> f64 {
+    return (oy + (2.0 * ((y - 1.0) / (height as f64 - 1.0)) - 1.0) * 1.12 * scale);
 }
 fn mandel2(mut x0: f64, mut y0: f64, maxitr: f64) -> (i32, f64) {
     let mut iterations: i32 = 0;
@@ -142,6 +141,9 @@ fn renderline(
             }
             ColoringMode::Monochrome(color) => {
                 line.extend_from_slice(&monocolor(iterations, maxitr, r, color))
+            }
+            ColoringMode::Funky(shift) =>{
+                line.extend_from_slice(&funkycolor(iterations, maxitr, r, shift))
             }
         }
     }

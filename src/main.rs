@@ -8,6 +8,7 @@ pub const WIDTH: i32 = 1976 / 2;
 pub const HEIGHT: i32 = 1792 / 2;
 
 mod fractal;
+mod hsl;
 use crate::fractal::{coord, mandelbrot, mandelcomp, px, py};
 //TODO
 // allow negative powers (look on wikipedia, theres a cool formula thing that you dont understand)
@@ -45,12 +46,14 @@ fn main() -> Result<(), eframe::Error> {
 pub enum ColoringMode {
     Hsl(f64),
     Monochrome(Color32),
+    Funky(f64),
 }
 impl ColoringMode{
     fn output(&self)-> String{
         match self{
             ColoringMode::Hsl(_) => return String::from("HSL"),
             ColoringMode::Monochrome(_) => return String::from("Monochrome"),
+            ColoringMode::Funky(_) => return String::from("Funky"),
         }
     }
 }
@@ -58,12 +61,14 @@ struct Content {
     center: coord,
     zoom: f64,
     image: RetainedImage,
+    image2: RetainedImage,
     time: f64,
     maxitr: i32,
     exponent: i32,
-    prev: (coord, f64, i32, i32, ColoringMode),
+    prev: (coord, f64, i32, i32, ColoringMode, bool),
     coloring: ColoringMode,
     pi: f64,
+    axes: bool,
 }
 impl Default for Content {
     fn default() -> Self {
@@ -85,12 +90,15 @@ impl Default for Content {
                     ),
                 ),
             ),
+            image2:RetainedImage::from_color_image(
+                "image2",ColorImage::new([WIDTH as usize, HEIGHT as usize], Color32::TRANSPARENT)),
             time: 50000000.,
             maxitr: 300,
             exponent: 2,
-            prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.)),
+            prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.), false),
             coloring: ColoringMode::Hsl(0.),
             pi: 0.,
+            axes: false,
         }
     }
 }
@@ -104,7 +112,9 @@ impl eframe::App for Content {
             .resizable(false)
             .show(ctx, |ui| {
                 ui.vertical(|ui| {
-                    self.image.show(ui);
+                    ui.put(Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}}, egui::Image::new(self.image.texture_id(ctx), Vec2{x: WIDTH as f32, y: HEIGHT as f32}));
+                    ui.put(Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}}, egui::Image::new(self.image2.texture_id(ctx), Vec2{x: WIDTH as f32, y: HEIGHT as f32}));
+
                     let pos = ctx.pointer_hover_pos();
                     if pos.is_some() {
                         let pos = pos.unwrap();
@@ -149,6 +159,7 @@ impl eframe::App for Content {
             });
             ui.separator();
             ui.style_mut().spacing.item_spacing = Vec2 { x: 10., y: 15. };
+            ui.checkbox(&mut self.axes, "show axes");
             ui.add(egui::Slider::new(&mut self.maxitr, 0..=15000).text("max iterations"));
             ui.add(egui::Slider::new(&mut self.exponent, 1..=100).text("exponent"));
             ui.add(
@@ -175,8 +186,12 @@ impl eframe::App for Content {
                         ColoringMode::Monochrome(egui::Color32::WHITE),
                         "Monochrome",
                     );
+                    ui.selectable_value(&mut self.coloring, ColoringMode::Funky(0.), "funky mode");
                 });
             if let ColoringMode::Hsl(ref mut shift) = &mut self.coloring {
+                let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
+            };
+            if let ColoringMode::Funky(ref mut shift) = &mut self.coloring {
                 let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
             };
             if let ColoringMode::Monochrome(ref mut color) = &mut self.coloring {
@@ -189,19 +204,50 @@ impl eframe::App for Content {
                     );
                 });
             };
-            
+            if ui.add(egui::Button::new("reset")).clicked() {
+                *self = Self {
+                    center: coord { x: -0.765, y: 0. },
+                    zoom: 1.,
+                    image: RetainedImage::from_color_image(
+                        "mandel",
+                        ColorImage::from_rgba_unmultiplied(
+                            [WIDTH as usize, HEIGHT as usize],
+                            &mandelbrot(
+                              coord { x: -0.765, y: 0. },
+                              1.,
+                              300.,
+                              2,
+                              WIDTH,
+                              HEIGHT,
+                              ColoringMode::Hsl(0.),
+                            ),
+                        ),
+                    ),
+                    image2:RetainedImage::from_color_image(
+                        "image2",ColorImage::new([WIDTH as usize, HEIGHT as usize], Color32::WHITE)),
+                    time: 50000000.,
+                    maxitr: 300,
+                    exponent: 2,
+                    prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.), false),
+                    coloring: ColoringMode::Hsl(0.),
+                    pi: 0.,
+                    axes: false,
+            }
+        }
             if ui.add(egui::Button::new("calculate pi!")).clicked() {
                 self.pi = crate::fractal::piapprox();
             }
             if self.pi != 0.{
             ui.label(format!("pi = {}", self.pi));
             }
-            let new: (coord, f64, i32, i32, ColoringMode) = (
+            
+            let new: (coord, f64, i32, i32, ColoringMode, bool) = (
                 self.center,
                 self.zoom,
                 self.maxitr,
                 self.exponent,
                 self.coloring,
+                self.axes,
             );
             if new != self.prev {
                 self.render();
@@ -254,6 +300,9 @@ impl eframe::App for Content {
                         self.zoom *= 2.;
                         self.render();
                     }
+                    if ctx.input(|i| i.pointer.secondary_pressed()){
+                        self.center = coord{x: px(current.x as f64, self.zoom, self.center.x, WIDTH), y: py(current.y as f64, self.zoom, self.center.y, HEIGHT)}
+                    }
                 }
             }
             self.prev = new;
@@ -278,6 +327,34 @@ impl Content {
                 ),
             ),
         );
+        if self.axes{
+        self.image2 = RetainedImage::from_color_image(
+            "image2",renderaxis(self.zoom,self.center));
+        }
+        else{
+            self.image2 =RetainedImage::from_color_image(
+                "image2",ColorImage::new([WIDTH as usize, HEIGHT as usize], Color32::TRANSPARENT));
+        }
         self.time = now.elapsed().as_nanos() as f64;
     }
+}
+fn renderaxis(zoom: f64, center: coord)-> ColorImage{
+    // this can be optimised if speed is a problem
+    // current fps draw = 6-7 fps yeah should optimise
+    let mut buf: Vec<u8> = Vec::new();
+    for i in 0..HEIGHT
+    {
+        for j in 0..WIDTH
+        {
+            let x = py(i as f64, zoom, center.y, HEIGHT);
+            let y = px(j as f64, zoom, center.x, WIDTH);
+            if (x.abs() < 0.005 * zoom) || (y.abs() < 0.005 * zoom){
+                buf.extend_from_slice(&[255,255,255,255]);
+            }
+            else{
+                buf.extend_from_slice(&[0,0,0,0]);
+            }
+        }
+    }
+    return ColorImage::from_rgba_unmultiplied([WIDTH as usize, HEIGHT as usize],&buf)
 }
