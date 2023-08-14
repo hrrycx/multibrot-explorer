@@ -128,7 +128,7 @@ impl eframe::App for Content {
                             ui.label(format!("pointer y: {}", y));
 
 
-                            let (iterations, points) =
+                            let (iterations, points, period) =
                                 mandelcomplist(x, y, self.maxitr as f64, self.exponent);
                             if self.orbits{
                                 for point in points{
@@ -136,10 +136,19 @@ impl eframe::App for Content {
                                 }
                             }
                             if iterations == self.maxitr {
+                                if period > -1{
+                                    ui.label(format!(
+                                        "this point stays bounded, with a period of {})",
+                                        period
+                                    )); 
+                                }
+                                else{
+
                                 ui.label(format!(
-                                    "this point stays bounded (in {} iterations)",
+                                    "this point stays bounded (in {} iterations), but no period detected",
                                     self.maxitr
                                 ));
+                            }
                             } else {
                                 ui.label(format!(
                                     "this point escapes in : {} iterations",
