@@ -99,10 +99,10 @@ fn funkycolor(iterations: i32, maxitr: f64, r: f64, shift: f64) -> [u8; 4]{
 }
 
 pub fn px(x: f64, scale: f64, ox: f64, width: i32) -> f64 {
-    return (ox) + ((2.0 * ((x - 1.0) / (width as f64 - 1.0)) - 1.0) * 1.235 * scale);
+    return (ox) + ((2.0 * ((x) / (width as f64 - 1.)) - 1.0) * 1.235 * scale);
 }
 pub fn py(y: f64, scale: f64, oy: f64, height: i32) -> f64 {
-    return (oy + (2.0 * ((y - 1.0) / (height as f64 - 1.0)) - 1.0) * 1.12 * scale);
+    return (oy + (2.0 * ((y) / (height as f64 - 1.)) - 1.0) * 1.12 * scale);
 }
 fn mandel2(mut x0: f64, mut y0: f64, maxitr: f64) -> (i32, f64) {
     let mut iterations: i32 = 0;
@@ -166,4 +166,12 @@ pub fn piapprox() -> f64{
     let epsilon = 0.0000001;
     let (iter,_) = mandelcomp(-0.75, epsilon, 1000000000000000000000000000000000., 2);
     return iter as f64 * epsilon;
+}
+pub fn xp(x: f64, ox: f64, zoom: f64, width: i32)-> i32
+{
+    return ((((((x-ox) / zoom) / 1.235) + 1.) / 2.) * width as f64) as i32
+}
+pub fn yp(y: f64, oy: f64, zoom: f64, height: i32)-> i32
+{
+    return ((((((y-oy) / zoom) / 1.12) + 1.) / 2.) * height as f64) as i32
 }

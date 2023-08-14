@@ -61,7 +61,6 @@ struct Content {
     center: coord,
     zoom: f64,
     image: RetainedImage,
-    image2: RetainedImage,
     time: f64,
     maxitr: i32,
     exponent: i32,
@@ -90,8 +89,6 @@ impl Default for Content {
                     ),
                 ),
             ),
-            image2:RetainedImage::from_color_image(
-                "image2",ColorImage::new([WIDTH as usize, HEIGHT as usize], Color32::TRANSPARENT)),
             time: 50000000.,
             maxitr: 300,
             exponent: 2,
@@ -113,7 +110,11 @@ impl eframe::App for Content {
             .show(ctx, |ui| {
                 ui.vertical(|ui| {
                     ui.put(Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}}, egui::Image::new(self.image.texture_id(ctx), Vec2{x: WIDTH as f32, y: HEIGHT as f32}));
-                    ui.put(Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}}, egui::Image::new(self.image2.texture_id(ctx), Vec2{x: WIDTH as f32, y: HEIGHT as f32}));
+                    if self.axes{
+                    let painter = egui::Painter::new(ctx.clone(), egui::LayerId::new(egui::Order::Foreground, egui::Id::new("mandel")),Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}});
+                    painter.vline(fractal::xp(0.0,self.center.x,self.zoom,WIDTH) as f32,0.0..=HEIGHT as f32,  egui::Stroke{width: 5., color: Color32::WHITE});
+                    painter.hline(0.0..=WIDTH as f32,fractal::yp(0.0,self.center.y,self.zoom,HEIGHT) as f32,  egui::Stroke{width: 5., color: Color32::WHITE});
+                }
 
                     let pos = ctx.pointer_hover_pos();
                     if pos.is_some() {
@@ -121,9 +122,10 @@ impl eframe::App for Content {
                         if pos.x < WIDTH as f32 && pos.y < HEIGHT as f32 {
                             let x = px(pos.x as f64, self.zoom, self.center.x, WIDTH);
                             let y = py(pos.y as f64, self.zoom, self.center.y, HEIGHT);
-
                             ui.label(format!("pointer x: {}", x));
                             ui.label(format!("pointer y: {}", y));
+
+
                             let (iterations, _) =
                                 mandelcomp(x, y, self.maxitr as f64, self.exponent);
                             if iterations == self.maxitr {
@@ -223,8 +225,6 @@ impl eframe::App for Content {
                             ),
                         ),
                     ),
-                    image2:RetainedImage::from_color_image(
-                        "image2",ColorImage::new([WIDTH as usize, HEIGHT as usize], Color32::WHITE)),
                     time: 50000000.,
                     maxitr: 300,
                     exponent: 2,
@@ -327,34 +327,6 @@ impl Content {
                 ),
             ),
         );
-        if self.axes{
-        self.image2 = RetainedImage::from_color_image(
-            "image2",renderaxis(self.zoom,self.center));
-        }
-        else{
-            self.image2 =RetainedImage::from_color_image(
-                "image2",ColorImage::new([WIDTH as usize, HEIGHT as usize], Color32::TRANSPARENT));
-        }
         self.time = now.elapsed().as_nanos() as f64;
     }
-}
-fn renderaxis(zoom: f64, center: coord)-> ColorImage{
-    // this can be optimised if speed is a problem
-    // current fps draw = 6-7 fps yeah should optimise
-    let mut buf: Vec<u8> = Vec::new();
-    for i in 0..HEIGHT
-    {
-        for j in 0..WIDTH
-        {
-            let x = py(i as f64, zoom, center.y, HEIGHT);
-            let y = px(j as f64, zoom, center.x, WIDTH);
-            if (x.abs() < 0.005 * zoom) || (y.abs() < 0.005 * zoom){
-                buf.extend_from_slice(&[255,255,255,255]);
-            }
-            else{
-                buf.extend_from_slice(&[0,0,0,0]);
-            }
-        }
-    }
-    return ColorImage::from_rgba_unmultiplied([WIDTH as usize, HEIGHT as usize],&buf)
 }
