@@ -9,7 +9,7 @@ pub const HEIGHT: i32 = 1792 / 2;
 
 mod fractal;
 mod hsl;
-use crate::fractal::{coord, mandelbrot, mandelcomp, px, py};
+use crate::fractal::{coord, mandelbrot, mandelcomp, px, py, mandelcomplist};
 //TODO
 // allow negative powers (look on wikipedia, theres a cool formula thing that you dont understand)
 // better colours
@@ -68,6 +68,7 @@ struct Content {
     coloring: ColoringMode,
     pi: f64,
     axes: bool,
+    orbits: bool,
 }
 impl Default for Content {
     fn default() -> Self {
@@ -96,6 +97,7 @@ impl Default for Content {
             coloring: ColoringMode::Hsl(0.),
             pi: 0.,
             axes: false,
+            orbits: false,
         }
     }
 }
@@ -110,8 +112,8 @@ impl eframe::App for Content {
             .show(ctx, |ui| {
                 ui.vertical(|ui| {
                     ui.put(Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}}, egui::Image::new(self.image.texture_id(ctx), Vec2{x: WIDTH as f32, y: HEIGHT as f32}));
-                    if self.axes{
                     let painter = egui::Painter::new(ctx.clone(), egui::LayerId::new(egui::Order::Foreground, egui::Id::new("mandel")),Rect{min:Pos2{x:0.,y:0.}, max:Pos2{x:WIDTH as f32, y:HEIGHT as f32}});
+                    if self.axes{
                     painter.vline(fractal::xp(0.0,self.center.x,self.zoom,WIDTH) as f32,0.0..=HEIGHT as f32,  egui::Stroke{width: 5., color: Color32::WHITE});
                     painter.hline(0.0..=WIDTH as f32,fractal::yp(0.0,self.center.y,self.zoom,HEIGHT) as f32,  egui::Stroke{width: 5., color: Color32::WHITE});
                 }
@@ -126,8 +128,13 @@ impl eframe::App for Content {
                             ui.label(format!("pointer y: {}", y));
 
 
-                            let (iterations, _) =
-                                mandelcomp(x, y, self.maxitr as f64, self.exponent);
+                            let (iterations, points) =
+                                mandelcomplist(x, y, self.maxitr as f64, self.exponent);
+                            if self.orbits{
+                                for point in points{
+                                    painter.circle_filled(Pos2{x: fractal::xp(point.x, self.center.x, self.zoom, WIDTH) as f32, y: fractal::yp(point.y, self.center.y, self.zoom, HEIGHT) as f32}, 2.0, Color32::WHITE);
+                                }
+                            }
                             if iterations == self.maxitr {
                                 ui.label(format!(
                                     "this point stays bounded (in {} iterations)",
@@ -162,6 +169,7 @@ impl eframe::App for Content {
             ui.separator();
             ui.style_mut().spacing.item_spacing = Vec2 { x: 10., y: 15. };
             ui.checkbox(&mut self.axes, "show axes");
+            ui.checkbox(&mut self.orbits, "show orbits");
             ui.add(egui::Slider::new(&mut self.maxitr, 0..=15000).text("max iterations"));
             ui.add(egui::Slider::new(&mut self.exponent, 1..=100).text("exponent"));
             ui.add(
@@ -232,6 +240,7 @@ impl eframe::App for Content {
                     coloring: ColoringMode::Hsl(0.),
                     pi: 0.,
                     axes: false,
+                    orbits: false,
             }
         }
             if ui.add(egui::Button::new("calculate pi!")).clicked() {

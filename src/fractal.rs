@@ -162,6 +162,18 @@ pub fn mandelcomp(mut x0: f64, mut y0: f64, maxitr: f64, n: i32) -> (i32, f64) {
     }
     return (iterations, z.re * z.re + z.im * z.im);
 }
+pub fn mandelcomplist(mut x0: f64, mut y0: f64, maxitr: f64, n: i32) -> (i32, Vec<coord>) {
+    let mut points: Vec<coord> = Vec::new();
+    let mut iterations: i32 = 0;
+    let c = complex { re: x0, im: y0 };
+    let mut z: complex = complex { re: 0., im: 0. };
+    while z.re * z.re + z.im * z.im < 1000. && iterations < maxitr as i32 {
+        z = cadd(cpow(z, n), c);
+        iterations += 1;
+        points.push(coord{x: z.re, y: z.im});
+    }
+    return (iterations, points);
+}
 pub fn piapprox() -> f64{
     let epsilon = 0.0000001;
     let (iter,_) = mandelcomp(-0.75, epsilon, 1000000000000000000000000000000000., 2);
