@@ -4,8 +4,8 @@ use eframe::IconData;
 use egui::*;
 use egui_extras::RetainedImage;
 use std::time::Instant;
-pub const WIDTH: i32 = 1976 / 2;
-pub const HEIGHT: i32 = 1792 / 2;
+pub const WIDTH: i32 = 1976/2;
+pub const HEIGHT: i32 = 1792/2;
 
 mod fractal;
 mod hsl;
@@ -16,10 +16,6 @@ use crate::fractal::{coord, mandelbrot, mandelcomp, px, py, mandelcomplist};
 // add option to show axes
 // styling
 fn main() -> Result<(), eframe::Error> {
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(12)
-        .build_global()
-        .unwrap();
     let mut native_options = eframe::NativeOptions::default();
     native_options.icon_data = Some(IconData {
         rgba: mandelbrot(

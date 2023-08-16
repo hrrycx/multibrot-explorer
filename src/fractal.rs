@@ -8,7 +8,7 @@ pub struct coord {
     pub x: f64,
     pub y: f64,
 }
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct complex {
     re: f64,
     im: f64,
@@ -110,11 +110,28 @@ fn mandel2(mut x0: f64, mut y0: f64, maxitr: f64) -> (i32, f64) {
     let mut y2: f64 = 0.0;
     let mut x: f64 = 0.0;
     let mut y: f64 = 0.0;
+    let mut xold: f64 = 0.0;
+    let mut yold: f64 = 0.0;
+
+    let q = (x0 - 0.25).powi(2) + y0 * y0;
+    if q * (q + (x0 - 0.25)) <= 0.25 * y0 * y0{
+        return (maxitr as i32, 0.0)
+    }
+    if (x0 + 1.).powi(2) + y0 * y0 <= 0.0625{
+        return (maxitr as i32, 0.0)
+    }
     while x2 + y2 < 4.0 && iterations < maxitr as i32 {
-        y = 2.0 * x * y + y0;
+        y = y*(x + x) + y0;
         x = x2 - y2 + x0;
         x2 = x * x;
         y2 = y * y;
+        if x == xold && y == yold{
+            return (maxitr as i32, x2 + y2);
+        }
+        if iterations % 25 == 0{
+            xold = x;
+            yold = y;
+        }
         iterations = iterations + 1;
     }
     return (iterations, x2 + y2);
@@ -153,11 +170,18 @@ pub fn mandelcomp(mut x0: f64, mut y0: f64, maxitr: f64, n: i32) -> (i32, f64) {
     if n == 2 {
         return mandel2(x0, y0, maxitr);
     }
+    let mut zold: complex = complex{re:0., im:0.};
     let mut iterations: i32 = 0;
     let c = complex { re: x0, im: y0 };
     let mut z: complex = complex { re: 0., im: 0. };
     while z.re * z.re + z.im * z.im < 4. && iterations < maxitr as i32 {
         z = cadd(cpow(z, n), c);
+        if z == zold{
+            return (maxitr as i32, 0.);
+        }
+        if iterations % 25 == 0{
+            zold = z;
+        }
         iterations += 1;
     }
     return (iterations, z.re * z.re + z.im * z.im);
