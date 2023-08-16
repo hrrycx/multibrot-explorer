@@ -4,12 +4,12 @@ use eframe::IconData;
 use egui::*;
 use egui_extras::RetainedImage;
 use std::time::Instant;
-pub const WIDTH: i32 = 1976/2;
-pub const HEIGHT: i32 = 1792/2;
+pub const WIDTH: i32 = 1976 / 2;
+pub const HEIGHT: i32 = 1792 / 2;
 
 mod fractal;
 mod hsl;
-use crate::fractal::{coord, mandelbrot, mandelcomp, px, py, mandelcomplist};
+use crate::fractal::{mandelbrot, mandelcomplist, px, py, Coord};
 //TODO
 // allow negative powers (look on wikipedia, theres a cool formula thing that you dont understand)
 // better colours
@@ -19,13 +19,13 @@ fn main() -> Result<(), eframe::Error> {
     let mut native_options = eframe::NativeOptions::default();
     native_options.icon_data = Some(IconData {
         rgba: mandelbrot(
-            coord { x: -0.765, y: 0. },
+            Coord { x: -0.765, y: 0. },
             1.,
             250.,
             2,
             256,
             256,
-            ColoringMode::Hsl(0.),
+            ColoringMode::Hsl(0., 1.),
         ),
         width: 256,
         height: 256,
@@ -40,27 +40,27 @@ fn main() -> Result<(), eframe::Error> {
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ColoringMode {
-    Hsl(f64),
-    Monochrome(Color32),
+    Hsl(f64, f64),
+    Monochrome(Color32, f64),
     Funky(f64),
 }
-impl ColoringMode{
-    fn output(&self)-> String{
-        match self{
-            ColoringMode::Hsl(_) => return String::from("HSL"),
-            ColoringMode::Monochrome(_) => return String::from("Monochrome"),
+impl ColoringMode {
+    fn output(&self) -> String {
+        match self {
+            ColoringMode::Hsl(_, _) => return String::from("HSL"),
+            ColoringMode::Monochrome(_, _) => return String::from("Monochrome"),
             ColoringMode::Funky(_) => return String::from("Funky"),
         }
     }
 }
 struct Content {
-    center: coord,
+    center: Coord,
     zoom: f64,
     image: RetainedImage,
     time: f64,
     maxitr: i32,
     exponent: i32,
-    prev: (coord, f64, i32, i32, ColoringMode, bool),
+    prev: (Coord, f64, i32, i32, ColoringMode, bool),
     coloring: ColoringMode,
     pi: f64,
     axes: bool,
@@ -69,28 +69,35 @@ struct Content {
 impl Default for Content {
     fn default() -> Self {
         Self {
-            center: coord { x: -0.765, y: 0. },
+            center: Coord { x: -0.765, y: 0. },
             zoom: 1.,
             image: RetainedImage::from_color_image(
                 "mandel",
                 ColorImage::from_rgba_unmultiplied(
                     [WIDTH as usize, HEIGHT as usize],
                     &mandelbrot(
-                      coord { x: -0.765, y: 0. },
-                      1.,
-                      300.,
-                      2,
-                      WIDTH,
-                      HEIGHT,
-                      ColoringMode::Hsl(0.),
+                        Coord { x: -0.765, y: 0. },
+                        1.,
+                        300.,
+                        2,
+                        WIDTH,
+                        HEIGHT,
+                        ColoringMode::Hsl(0., 1.),
                     ),
                 ),
             ),
             time: 50000000.,
             maxitr: 300,
             exponent: 2,
-            prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.), false),
-            coloring: ColoringMode::Hsl(0.),
+            prev: (
+                Coord { x: -0.765, y: 0. },
+                1.,
+                0,
+                2,
+                ColoringMode::Hsl(0., 1.),
+                false,
+            ),
+            coloring: ColoringMode::Hsl(0., 1.),
             pi: 0.,
             axes: false,
             orbits: false,
@@ -136,7 +143,7 @@ impl eframe::App for Content {
                                     ui.label(format!(
                                         "this point stays bounded, with a period of {})",
                                         period
-                                    )); 
+                                    ));
                                 }
                                 else{
 
@@ -195,21 +202,22 @@ impl eframe::App for Content {
             egui::ComboBox::from_label("Select one!")
                 .selected_text(format!("{}", self.coloring.output()))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.coloring, ColoringMode::Hsl(0.), "Hsl");
+                    ui.selectable_value(&mut self.coloring, ColoringMode::Hsl(0., 1.), "Hsl");
                     ui.selectable_value(
                         &mut self.coloring,
-                        ColoringMode::Monochrome(egui::Color32::WHITE),
+                        ColoringMode::Monochrome(egui::Color32::WHITE, 1.),
                         "Monochrome",
                     );
                     ui.selectable_value(&mut self.coloring, ColoringMode::Funky(0.), "funky mode");
                 });
-            if let ColoringMode::Hsl(ref mut shift) = &mut self.coloring {
+            if let ColoringMode::Hsl(ref mut shift, ref mut range) = &mut self.coloring {
                 let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
+                let _ = ui.add(egui::Slider::new(range, 0.0..=500.).text("hue normalisation"));
             };
             if let ColoringMode::Funky(ref mut shift) = &mut self.coloring {
                 let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
             };
-            if let ColoringMode::Monochrome(ref mut color) = &mut self.coloring {
+            if let ColoringMode::Monochrome(ref mut color, ref mut range) = &mut self.coloring {
                 ui.horizontal(|ui| {
                     ui.label("tint:");
                     let _ = egui::color_picker::color_edit_button_srgba(
@@ -218,44 +226,52 @@ impl eframe::App for Content {
                         egui::color_picker::Alpha::Opaque,
                     );
                 });
+                let _ = ui.add(egui::Slider::new(range, 0.0..=500.).text("colour normalisation"));
             };
             if ui.add(egui::Button::new("reset")).clicked() {
                 *self = Self {
-                    center: coord { x: -0.765, y: 0. },
+                    center: Coord { x: -0.765, y: 0. },
                     zoom: 1.,
                     image: RetainedImage::from_color_image(
                         "mandel",
                         ColorImage::from_rgba_unmultiplied(
                             [WIDTH as usize, HEIGHT as usize],
                             &mandelbrot(
-                              coord { x: -0.765, y: 0. },
-                              1.,
-                              300.,
-                              2,
-                              WIDTH,
-                              HEIGHT,
-                              ColoringMode::Hsl(0.),
+                                Coord { x: -0.765, y: 0. },
+                                1.,
+                                300.,
+                                2,
+                                WIDTH,
+                                HEIGHT,
+                                ColoringMode::Hsl(0., 1.),
                             ),
                         ),
                     ),
                     time: 50000000.,
                     maxitr: 300,
                     exponent: 2,
-                    prev: (coord { x: -0.765, y: 0. }, 1., 0, 2, ColoringMode::Hsl(0.), false),
-                    coloring: ColoringMode::Hsl(0.),
+                    prev: (
+                        Coord { x: -0.765, y: 0. },
+                        1.,
+                        0,
+                        2,
+                        ColoringMode::Hsl(0., 1.),
+                        false,
+                    ),
+                    coloring: ColoringMode::Hsl(0., 1.),
                     pi: 0.,
                     axes: false,
                     orbits: false,
+                }
             }
-        }
             if ui.add(egui::Button::new("calculate pi!")).clicked() {
                 self.pi = crate::fractal::piapprox();
             }
-            if self.pi != 0.{
-            ui.label(format!("pi = {}", self.pi));
+            if self.pi != 0. {
+                ui.label(format!("pi = {}", self.pi));
             }
-            
-            let new: (coord, f64, i32, i32, ColoringMode, bool) = (
+
+            let new: (Coord, f64, i32, i32, ColoringMode, bool) = (
                 self.center,
                 self.zoom,
                 self.maxitr,
@@ -314,8 +330,11 @@ impl eframe::App for Content {
                         self.zoom *= 2.;
                         self.render();
                     }
-                    if ctx.input(|i| i.pointer.secondary_pressed()){
-                        self.center = coord{x: px(current.x as f64, self.zoom, self.center.x, WIDTH), y: py(current.y as f64, self.zoom, self.center.y, HEIGHT)}
+                    if ctx.input(|i| i.pointer.secondary_pressed()) {
+                        self.center = Coord {
+                            x: px(current.x as f64, self.zoom, self.center.x, WIDTH),
+                            y: py(current.y as f64, self.zoom, self.center.y, HEIGHT),
+                        }
                     }
                 }
             }
