@@ -68,13 +68,13 @@ pub fn mandelbrot(
         .collect();
     buf
 }
-fn hslcolor(iterations: i32, maxitr: f64, r: f64, shift: f64, range: f64) -> [u8; 4] {
+fn hslcolor(iterations: i32, maxitr: f64, r: f64, shift: f64, normal: f64, range: f64) -> [u8; 4] {
     if iterations >= maxitr as i32 {
         return [0, 0, 0, 255];
     }
     let iterations: f64 = iterations as f64 + 1.0 - (((r).ln() / 2.0).ln()) / 2.0_f64.ln();
     let rgba = hsl::hsl_to_rgba(
-        ((iterations / maxitr) + (shift / 360.) % 1.) * (range),
+        ((((iterations / maxitr)  *(range/360.) + (shift / 360.))) % 1.) * (normal),
         1.,
         0.5,
     );
@@ -116,6 +116,8 @@ fn mandel2(x0: f64, y0: f64, maxitr: f64) -> (i32, f64) {
     let mut y: f64 = 0.0;
     let mut xold: f64 = 0.0;
     let mut yold: f64 = 0.0;
+    
+    if x0 > -1.25 && y0.abs() < 0.85{
 
     let q = (x0 - 0.25).powi(2) + y0 * y0;
     if q * (q + (x0 - 0.25)) <= 0.25 * y0 * y0 {
@@ -124,6 +126,11 @@ fn mandel2(x0: f64, y0: f64, maxitr: f64) -> (i32, f64) {
     if (x0 + 1.).powi(2) + y0 * y0 <= 0.0625 {
         return (maxitr as i32, 0.0);
     }
+    if (x0 + 0.125).powi(2) + (y0.abs() - 0.7445).powi(2) <= 0.0089{
+        return (maxitr as i32, 0.0);
+    }
+}
+
     while x2 + y2 < 4.0 && iterations < maxitr as i32 {
         y = y * (x + x) + y0;
         x = x2 - y2 + x0;
@@ -139,6 +146,7 @@ fn mandel2(x0: f64, y0: f64, maxitr: f64) -> (i32, f64) {
         iterations = iterations + 1;
     }
     return (iterations, x2 + y2);
+    
 }
 fn renderline(
     linenumber: u32,
@@ -157,8 +165,8 @@ fn renderline(
         x0 = px(x as f64, scale, center.x, width);
         let (iterations, r) = mandelcomp(x0, y0, maxitr, exponent);
         match mode {
-            ColoringMode::Hsl(shift, range) => {
-                line.extend_from_slice(&hslcolor(iterations, maxitr, r, shift, range))
+            ColoringMode::Hsl(shift, normal, range) => {
+                line.extend_from_slice(&hslcolor(iterations, maxitr, r, shift, normal, range))
             }
             ColoringMode::Monochrome(color, range) => {
                 line.extend_from_slice(&monocolor(iterations, maxitr, r, color, range))

@@ -13,7 +13,6 @@ use crate::fractal::{mandelbrot, mandelcomplist, px, py, Coord};
 //TODO
 // allow negative powers (look on wikipedia, theres a cool formula thing that you dont understand)
 // better colours
-// add option to show axes
 // styling
 fn main() -> Result<(), eframe::Error> {
     let mut native_options = eframe::NativeOptions::default();
@@ -25,7 +24,7 @@ fn main() -> Result<(), eframe::Error> {
             2,
             256,
             256,
-            ColoringMode::Hsl(0., 1.),
+            ColoringMode::Hsl(0., 1., 360.),
         ),
         width: 256,
         height: 256,
@@ -40,14 +39,14 @@ fn main() -> Result<(), eframe::Error> {
 }
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum ColoringMode {
-    Hsl(f64, f64),
+    Hsl(f64, f64, f64),
     Monochrome(Color32, f64),
     Funky(f64),
 }
 impl ColoringMode {
     fn output(&self) -> String {
         match self {
-            ColoringMode::Hsl(_, _) => return String::from("HSL"),
+            ColoringMode::Hsl(_, _,_) => return String::from("HSL"),
             ColoringMode::Monochrome(_, _) => return String::from("Monochrome"),
             ColoringMode::Funky(_) => return String::from("Funky"),
         }
@@ -82,7 +81,7 @@ impl Default for Content {
                         2,
                         WIDTH,
                         HEIGHT,
-                        ColoringMode::Hsl(0., 1.),
+                        ColoringMode::Hsl(0., 1., 360.),
                     ),
                 ),
             ),
@@ -94,10 +93,10 @@ impl Default for Content {
                 1.,
                 0,
                 2,
-                ColoringMode::Hsl(0., 1.),
+                ColoringMode::Hsl(0., 1., 360.),
                 false,
             ),
-            coloring: ColoringMode::Hsl(0., 1.),
+            coloring: ColoringMode::Hsl(0., 1., 360.),
             pi: 0.,
             axes: false,
             orbits: false,
@@ -128,7 +127,7 @@ impl eframe::App for Content {
                             let x = px(pos.x as f64, self.zoom, self.center.x, WIDTH);
                             let y = py(pos.y as f64, self.zoom, self.center.y, HEIGHT);
                             ui.label(format!("pointer x: {}", x));
-                            ui.label(format!("pointer y: {}", y));
+                            ui.label(format!("pointer y: {}", -y));
 
 
                             let (iterations, points, period) =
@@ -202,7 +201,7 @@ impl eframe::App for Content {
             egui::ComboBox::from_label("Select one!")
                 .selected_text(format!("{}", self.coloring.output()))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.coloring, ColoringMode::Hsl(0., 1.), "Hsl");
+                    ui.selectable_value(&mut self.coloring, ColoringMode::Hsl(0., 1., 360.), "Hsl");
                     ui.selectable_value(
                         &mut self.coloring,
                         ColoringMode::Monochrome(egui::Color32::WHITE, 1.),
@@ -210,9 +209,11 @@ impl eframe::App for Content {
                     );
                     ui.selectable_value(&mut self.coloring, ColoringMode::Funky(0.), "funky mode");
                 });
-            if let ColoringMode::Hsl(ref mut shift, ref mut range) = &mut self.coloring {
+            if let ColoringMode::Hsl(ref mut shift, ref mut normalisation, ref mut range) = &mut self.coloring {
                 let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
-                let _ = ui.add(egui::Slider::new(range, 0.0..=500.).text("hue normalisation"));
+                let _ = ui.add(egui::Slider::new(normalisation, 0.0..=500.).text("hue normalisation"));
+                let _ = ui.add(egui::Slider::new(range, 0.0..=360.).text("hue range"));
+
             };
             if let ColoringMode::Funky(ref mut shift) = &mut self.coloring {
                 let _ = ui.add(egui::Slider::new(shift, 0.0..=360.).text("hue shift"));
@@ -243,7 +244,7 @@ impl eframe::App for Content {
                                 2,
                                 WIDTH,
                                 HEIGHT,
-                                ColoringMode::Hsl(0., 1.),
+                                ColoringMode::Hsl(0., 1., 360.),
                             ),
                         ),
                     ),
@@ -255,10 +256,10 @@ impl eframe::App for Content {
                         1.,
                         0,
                         2,
-                        ColoringMode::Hsl(0., 1.),
+                        ColoringMode::Hsl(0., 1., 360.),
                         false,
                     ),
-                    coloring: ColoringMode::Hsl(0., 1.),
+                    coloring: ColoringMode::Hsl(0., 1., 360.),
                     pi: 0.,
                     axes: false,
                     orbits: false,
